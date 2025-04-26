@@ -1,35 +1,35 @@
 # AuCoffre Scraper
 
-Un outil Python pour récupérer la liste de produits sur **AuCoffre.com**, extraire la **prime** (%) et détecter le label **LSP**, puis envoyer une alerte via **Pushover** si certaines conditions sont remplies.
+A Python tool to retrieve product listings from **AuCoffre.com**, extract the **premium** (percentage) and detect the **LSP** label, then send an alert via **Pushover** if specified conditions are met.
 
 ---
 
-## Caractéristiques
+## Features
 
-- 💻 Téléchargement de la page cible avec un en-tête User-Agent.
-- 📄 Sauvegarde du contenu HTML brut et du contenu HTML formaté :
+- 💻 Download the target page with a custom User-Agent header.
+- 📄 Save both the raw HTML content and a prettified version:
   - `page_content_raw.html`
-  - `page_content_formate.html`
-- 🔍 Extraction de la **prime** (pourcentage) à partir des éléments HTML.
-- 🏷️ Vérification de la présence du label **LSP**.
-- 🔔 Envoi d’alertes via Pushover lorsque la prime est inférieure ou égale à 5% et que le produit a le label LSP.
-- 🗒️ Journalisation détaillée avec **Loguru** dans `aucoffre.log`.
+  - `page_content_formatted.html`
+- 🔍 Extract the **premium** (%) from HTML elements.
+- 🏷️ Check for the presence of the **LSP** label.
+- 🔔 Send alerts via Pushover when the premium is less than or equal to 5% and the product has the LSP label.
+- 🗒️ Detailed logging with **Loguru** in `aucoffre.log`.
 
-## Prérequis
+## Prerequisites
 
-- Python 3.8 ou supérieur
-- [pip](https://pip.pypa.io/) (ou un autre gestionnaire de paquets Python)
+- Python 3.8 or higher
+- [pip](https://pip.pypa.io/) (or another Python package manager)
 
 ## Installation
 
-1. Clonez ce dépôt :
+1. Clone the repository:
 
 ```bash
-git clone https://github.com/votre-utilisateur/aucoffre-scraper.git
+git clone https://github.com/your-username/aucoffre-scraper.git
 cd aucoffre-scraper
 ```
 
-2. Installez les dépendances :
+2. Install dependencies:
 
 ```bash
 pip install -r requirements.txt
@@ -37,42 +37,51 @@ pip install -r requirements.txt
 
 ## Configuration
 
-1. Dupliquez le fichier exemple `.env.example` ou créez un fichier `.env` à la racine du projet.
-2. Ajoutez vos identifiants Pushover :
+1. Duplicate the example file `.env.example` or create a new `.env` file in the project root.
+2. Add your Pushover credentials:
 
 ```ini
-PUSHOVER_TOKEN=votre_pushover_token
-PUSHOVER_USER=votre_pushover_user
+PUSHOVER_TOKEN=your_pushover_token
+PUSHOVER_USER=your_pushover_user
 ```
 
 ## Usage
 
-Lancez simplement le script principal en fournissant l’URL cible (par défaut, c’est déjà l’URL du site AuCoffre) :
+Run the main script. By default, it targets AuCoffre’s product page:
 
 ```bash
 python main.py
 ```
 
-Pour utiliser une autre URL :
+To use a different URL:
 
 ```bash
-python main.py "https://votre-site-cible.com"
+python main.py "https://your-target-site.com"
 ```
 
-## Fichiers générés
+## Generated Files
 
-- `page_content_raw.html` : contenu brut de la page récupérée.
-- `page_content_formate.html` : même contenu, mais mis en forme (prettified).
-- `aucoffre.log` : journal d’exécution avec logs d’information, d’erreur et de succès.
+- `page_content_raw.html` – Raw HTML of the fetched page.
+- `page_content_formatted.html` – The same content, prettified.
+- `aucoffre.log` – Execution log with info, error, and success messages.
 
-## Personnalisation
+## Customization
 
-- Modifiez les seuils ou la logique dans `main.py` selon vos besoins :
-- Seuil de **prime** (5%)
-- Présence ou non du label **LSP**
+- Adjust thresholds or logic in `main.py` as needed:
+- Premium threshold (default: 5%)
+- Presence of the LSP label
 
-## Licence
+## Contributing
 
-Ce projet est sous licence MIT. 
+Contributions are welcome!
 
+1. Fork the repository
+2. Create a branch (`git checkout -b feature/my-feature`)
+3. Commit your changes (`git commit -m "Add my feature"`)
+4. Push to your branch (`git push origin feature/my-feature`)
+5. Open a pull request
+
+## License
+
+This project is licensed under the MIT License. 
 
