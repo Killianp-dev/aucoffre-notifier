@@ -83,7 +83,10 @@ def main_function(url):
     logger.info("✅ Fin de l'exécution de main_function")
 
 
-url_target = "https://www.aucoffre.com/recherche/metal-1/marketing_list-5/stype-1/produit"
+url_target = "https://www.aucoffre.com/recherche/metal-1/marketing_list-5/stype-1/produit?page="
+
 
 if __name__ == "__main__":
-    main_function(url_target)
+    for page in range (1, 5):
+        logger.info(f"🔍 Traitement de la page {page}")
+        main_function(f"{url_target}{page}")
