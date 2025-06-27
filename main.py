@@ -13,8 +13,14 @@ CURRENT_DIR = Path(__file__).resolve().parent
 FILE_RAW = CURRENT_DIR / "page_content_raw.html"
 FILE_FORMATE = CURRENT_DIR / "page_content_formate.html"
 
-# Configuration du logger "diswec"
-logger.add(CURRENT_DIR / "aucoffre.log", format="{time} {level} {message}", level="INFO", rotation="1 MB")
+logger.add(
+    CURRENT_DIR / "aucoffre.log",
+    format="{time:YYYY-MM-DD HH:mm:ss.SSS} {level} {message}",
+    level="INFO", 
+    rotation="10 KB",
+    retention=3,
+    compression="zip"
+)
 
 
 class Product:
@@ -78,7 +84,7 @@ def main_function(url):
     products = get_products(url)
     for product in products:
         logger.success(f"Produit analysé - Prime : {product.prime}% | LSP : {product.lsp}")
-        if product.prime is not None and product.lsp is True and product.prime <= 5.0:
+        if product.prime is not None and product.lsp is True and product.prime <= 3.0:
             send_alert(f"⚠️ Alerte : prime {product.prime}% LSP !")
     logger.info("✅ Fin de l'exécution de main_function")
 
