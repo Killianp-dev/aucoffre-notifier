@@ -31,9 +31,12 @@ wheelhouse/
 *.spec
 
 ###############################################################################
-#  DJANGO
+#  DJANGO / LOGS
 ###############################################################################
-*.log  
+*.log
+*.log.zip
+page_content_raw.html
+page_content_formate.html
 db.sqlite3
 db.sqlite3-journal
 staticfiles/
