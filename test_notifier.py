@@ -174,3 +174,12 @@ def test_main_function_no_alert_no_lsp(mock_alert, mock_get_products):
     main_function("http://fake-url.com")
     
     mock_alert.assert_not_called()
+
+
+# --- TEST LIVE ---
+
+def test_send_alert_live():
+    """Envoie une notification réelle. Nécessite PUSHOVER_TOKEN et PUSHOVER_USER dans .env."""
+    from dotenv import load_dotenv
+    load_dotenv()
+    send_alert("🚀 Test de notification en direct depuis les tests !")
