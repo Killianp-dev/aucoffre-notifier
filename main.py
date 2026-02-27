@@ -84,12 +84,13 @@ def main_function(url):
     products = get_products(url)
     for product in products:
         logger.success(f"Produit analysé - Prime : {product.prime}% | LSP : {product.lsp}")
-        if product.prime is not None and product.lsp is True and product.prime <= 3.0:
+        if product.prime is not None and product.lsp is True and product.prime <= 18.9:
             send_alert(f"⚠️ Alerte : prime {product.prime}% LSP !")
     logger.info("✅ Fin de l'exécution de main_function")
 
 
-url_target = "https://www.aucoffre.com/recherche/metal-1/marketing_list-5/stype-1/produit?page="
+# url_target = "https://www.aucoffre.com/recherche/metal-1/marketing_list-5/stype-1/produit?page="
+url_target = "https://www.aucoffre.com/recherche/metal-3/marketing_list-4/stype-171/produit?page="
 
 
 if __name__ == "__main__":
