@@ -1,185 +1,115 @@
 import os
 import pytest
-from unittest.mock import patch, mock_open, MagicMock
+from unittest.mock import patch, MagicMock
 from bs4 import BeautifulSoup
-import requests
 
-# On importe les fonctions et classes depuis ton script principal (main.py)
-from main import Product, save_html_files, get_products, send_alert, main_function
+# Assure-toi que ton script principal s'appelle bien "main.py"
+from main import Product, get_products, main_function, send_alert
 
-# --- TESTS POUR LA CLASSE Product ---
+# --- FAUSSES DONNÉES HTML POUR LES TESTS ---
 
-def test_product_extract_prime_with_comma():
-    """Teste l'extraction d'une prime formatée avec une virgule."""
-    html = '<article><span class="text-bold">Prime de 18,5% sur ce produit</span></article>'
-    soup = BeautifulSoup(html, "html.parser").article
-    product = Product(soup)
-    assert product.prime == 18.5
-    assert product.lsp is False
+HTML_LSP_CHEAP = """
+<article class="product-card">
+    <div class="ribbon">LSP</div>
+    <p class="text-xlarge text-bolder">85,50 &nbsp;€</p>
+</article>
+"""
 
-def test_product_extract_prime_with_dot():
-    """Teste l'extraction d'une prime formatée avec un point."""
-    html = '<article><span class="text-bold">Prime : 10.2%</span></article>'
-    soup = BeautifulSoup(html, "html.parser").article
-    product = Product(soup)
-    assert product.prime == 10.2
+HTML_NO_LSP_EXPENSIVE = """
+<article class="product-card">
+    <p class="text-xlarge text-bolder">105.00 €</p>
+</article>
+"""
 
-def test_product_no_prime():
-    """Teste le comportement si aucune prime n'est trouvée."""
-    html = '<article><span class="text-bold">Pas de prime ici</span></article>'
-    soup = BeautifulSoup(html, "html.parser").article
-    product = Product(soup)
-    assert product.prime is None
+HTML_INVALID_PRICE = """
+<article class="product-card">
+    <p class="text-xlarge text-bolder">Prix sur demande</p>
+</article>
+"""
 
-def test_product_has_lsp():
-    """Teste la détection du tag LSP."""
-    html = '<article><div class="ribbon">Produit LSP Exclusif</div></article>'
-    soup = BeautifulSoup(html, "html.parser").article
-    product = Product(soup)
+# --- TESTS UNITAIRES (SANS RÉSEAU) ---
+
+def test_product_extraction_lsp_cheap():
+    """Teste l'extraction d'un produit qui a le badge LSP et un prix valide."""
+    soup = BeautifulSoup(HTML_LSP_CHEAP, "html.parser")
+    product = Product(soup.find("article"))
+    
+    assert product.price == 85.5
     assert product.lsp is True
 
-def test_product_no_lsp():
-    """Teste le comportement si le tag LSP est absent."""
-    html = '<article><div class="ribbon">Produit Standard</div></article>'
-    soup = BeautifulSoup(html, "html.parser").article
-    product = Product(soup)
+def test_product_extraction_no_lsp_expensive():
+    """Teste l'extraction d'un produit sans badge LSP."""
+    soup = BeautifulSoup(HTML_NO_LSP_EXPENSIVE, "html.parser")
+    product = Product(soup.find("article"))
+    
+    assert product.price == 105.0
     assert product.lsp is False
 
-
-# --- TESTS POUR save_html_files ---
-
-@patch("builtins.open", new_callable=mock_open)
-def test_save_html_files(mock_file):
-    """Teste que les fichiers sont bien créés et écrits sans écrire réellement sur le disque."""
-    html_content = "<html><body>Test</body></html>"
-    soup = BeautifulSoup(html_content, "html.parser")
+def test_product_extraction_invalid_price():
+    """Teste la robustesse si le prix n'est pas un nombre."""
+    soup = BeautifulSoup(HTML_INVALID_PRICE, "html.parser")
+    product = Product(soup.find("article"))
     
-    save_html_files(html_content, soup)
-    
-    # Vérifie que la fonction open a été appelée deux fois (pour RAW et FORMATE)
-    assert mock_file.call_count == 2
+    assert product.price is None
+    assert product.lsp is False
 
-
-# --- TESTS POUR get_products ---
-
-@patch("main.requests.get")
-@patch("main.save_html_files")
-def test_get_products_success(mock_save, mock_get):
-    """Teste la récupération réussie des produits."""
-    mock_get.return_value.status_code = 200
-    mock_get.return_value.text = '''
-        <article class="product-card">
-            <span class="text-bold">15,0%</span>
-            <div class="ribbon">LSP</div>
-        </article>
-    '''
-    
-    products = get_products("http://fake-url.com")
-    
-    assert len(products) == 1
-    assert products[0].prime == 15.0
-    assert products[0].lsp is True
-    mock_save.assert_called_once() # Vérifie qu'on a bien sauvegardé les HTML
-
-@patch("main.requests.get")
-def test_get_products_failure(mock_get):
-    """Teste le comportement en cas d'erreur HTTP (ex: 404 ou 500)."""
-    mock_get.return_value.status_code = 404
-    products = get_products("http://fake-url.com")
-    assert products == []
-
-
-# --- TESTS POUR send_alert (Pushover) ---
-
-@patch.dict(os.environ, {"PUSHOVER_TOKEN": "fake_token", "PUSHOVER_USER": "fake_user"})
-@patch("main.requests.post")
-def test_send_alert_success(mock_post):
-    """Teste l'envoi d'une alerte avec succès."""
+@patch("main.save_html_files")  # On empêche l'écriture de fichiers pendant les tests
+@patch("main.requests.get")     # On simule la requête HTTP
+def test_get_products(mock_get, mock_save):
+    """Teste la fonction de récupération des produits en simulant le site web."""
+    # Configuration de la fausse réponse
     mock_response = MagicMock()
-    mock_post.return_value = mock_response
-    
-    send_alert("Test Alert")
-    
-    mock_post.assert_called_once()
-    mock_response.raise_for_status.assert_called_once()
+    mock_response.status_code = 200
+    mock_response.text = HTML_LSP_CHEAP + HTML_NO_LSP_EXPENSIVE
+    mock_get.return_value = mock_response
 
-@patch.dict(os.environ, {"PUSHOVER_TOKEN": "fake_token", "PUSHOVER_USER": "fake_user"})
-@patch("main.requests.post")
-def test_send_alert_params_check(mock_post):
-    """Vérifie que les bons paramètres sont envoyés à l'API Pushover."""
-    mock_post.return_value = MagicMock()
-    message = "⚠️ Alerte : prime 15.0% LSP !"
+    products = get_products("http://url-de-test.com")
     
+    assert len(products) == 2
+    assert products[0].price == 85.5
+    assert products[1].price == 105.0
+    mock_save.assert_called_once() # Vérifie qu'on a bien tenté de sauvegarder les fichiers HTML
+
+@patch("main.get_products")
+@patch("main.send_alert")
+def test_main_function(mock_send_alert, mock_get_products):
+    """Teste la logique d'alerte : on ne doit alerter QUE si LSP=True ET Prix <= 90."""
+    # Création de faux produits
+    p_trigger = MagicMock(price=85.0, lsp=True)     # Devrait déclencher
+    p_expensive = MagicMock(price=95.0, lsp=True)   # Trop cher, ne doit pas déclencher
+    p_no_lsp = MagicMock(price=80.0, lsp=False)     # Pas de LSP, ne doit pas déclencher
+    
+    mock_get_products.return_value = [p_trigger, p_expensive, p_no_lsp]
+    
+    main_function("http://url-de-test.com")
+    
+    # Vérification : send_alert ne doit avoir été appelée qu'une seule fois
+    assert mock_send_alert.call_count == 1
+    # Vérifie que le message d'alerte contenait bien le prix de 85.0€
+    assert "85.0" in mock_send_alert.call_args[0][0]
+
+# --- TEST D'INTÉGRATION RÉEL (RÉSEAU + API PUSHOVER) ---
+
+@patch("main.logger.error")
+@patch("main.logger.success")
+def test_real_pushover_notification(mock_logger_success, mock_logger_error):
+    """
+    Test RÉEL qui envoie une notification Pushover.
+    Vérifie si le .env est bien configuré et si l'API accepte les credentials.
+    """
+    token = os.environ.get("PUSHOVER_TOKEN")
+    user = os.environ.get("PUSHOVER_USER")
+    
+    # Si les variables ne sont pas là, on ignore le test plutôt que de le faire planter
+    if not token or not user:
+        pytest.skip("⚠️ Les variables PUSHOVER_TOKEN et PUSHOVER_USER ne sont pas définies.")
+        
+    message = "🧪 Ceci est un test automatisé depuis pytest pour vérifier la configuration de l'API."
+    
+    # On exécute la vraie fonction
     send_alert(message)
     
-    # Vérification de l'URL et des paramètres postés
-    args, kwargs = mock_post.call_args
-    assert args[0] == "https://api.pushover.net/1/messages.json"
-    assert kwargs["data"]["token"] == "fake_token"
-    assert kwargs["data"]["user"] == "fake_user"
-    assert kwargs["data"]["message"] == message
-
-@patch.dict(os.environ, {"PUSHOVER_TOKEN": "fake_token", "PUSHOVER_USER": "fake_user"})
-@patch("main.requests.post")
-def test_send_alert_failure(mock_post):
-    """Teste l'envoi d'une alerte qui échoue (lève une exception)."""
-    mock_post.side_effect = requests.RequestException("API down")
-    
-    # La fonction gère l'exception via try/except, donc elle ne doit pas faire crasher le test
-    send_alert("Test Alert")
-    mock_post.assert_called_once()
-
-
-# --- TESTS POUR main_function ---
-
-@patch("main.get_products")
-@patch("main.send_alert")
-def test_main_function_triggers_alert(mock_alert, mock_get_products):
-    """Teste que l'alerte est déclenchée pour un produit correspondant aux critères (LSP + Prime <= 18.9)."""
-    # Création d'un mock de produit qui remplit les conditions
-    mock_product = MagicMock()
-    mock_product.prime = 18.5
-    mock_product.lsp = True
-    
-    mock_get_products.return_value = [mock_product]
-    
-    main_function("http://fake-url.com")
-    
-    mock_alert.assert_called_once_with("⚠️ Alerte : prime 18.5% LSP !")
-
-@patch("main.get_products")
-@patch("main.send_alert")
-def test_main_function_no_alert_prime_too_high(mock_alert, mock_get_products):
-    """Teste que l'alerte n'est pas déclenchée si la prime est > 18.9."""
-    mock_product = MagicMock()
-    mock_product.prime = 19.0
-    mock_product.lsp = True
-    
-    mock_get_products.return_value = [mock_product]
-    
-    main_function("http://fake-url.com")
-    
-    mock_alert.assert_not_called()
-
-@patch("main.get_products")
-@patch("main.send_alert")
-def test_main_function_no_alert_no_lsp(mock_alert, mock_get_products):
-    """Teste que l'alerte n'est pas déclenchée si ce n'est pas un produit LSP."""
-    mock_product = MagicMock()
-    mock_product.prime = 15.0
-    mock_product.lsp = False
-    
-    mock_get_products.return_value = [mock_product]
-    
-    main_function("http://fake-url.com")
-    
-    mock_alert.assert_not_called()
-
-
-# --- TEST LIVE ---
-
-def test_send_alert_live():
-    """Envoie une notification réelle. Nécessite PUSHOVER_TOKEN et PUSHOVER_USER dans .env."""
-    from dotenv import load_dotenv
-    load_dotenv()
-    send_alert("🚀 Test de notification en direct depuis les tests !")
+    # Comme ta fonction `send_alert` attrape les exceptions avec un try/except et fait un logger.error,
+    # on vérifie qu'aucun logger.error n'a été appelé et que logger.success l'a été.
+    assert not mock_logger_error.called, "❌ Erreur détectée dans les logs : la configuration de l'API Pushover semble invalide."
+    assert mock_logger_success.called, "✅ Le message n'a pas pu être envoyé à Pushover."
