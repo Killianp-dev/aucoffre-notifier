@@ -84,6 +84,48 @@ def send_alert(message):
         logger.error(f"❌ Impossible d'envoyer l'alerte : {str(e)}")
 
 
+def check_gold_price(url):
+    """
+    Récupère le cours de l'once d'or en temps réel et envoie une alerte 
+    Pushover si le prix dépasse 4600€.
+    """
+    logger.info("▶️ Vérification du cours de l'or...")
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36"
+    }
+    try:
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.text, "html.parser")
+            
+            # On cherche la cellule <td> contenant le texte "Once d'or"
+            once_cell = soup.find("td", class_="cotation_name", string=re.compile("Once d'or", re.IGNORECASE))
+            
+            if once_cell:
+                # La valeur se trouve dans le <td> suivant avec la classe "cotation_amount"
+                price_cell = once_cell.find_next_sibling("td", class_="cotation_amount")
+                
+                if price_cell:
+                    # Nettoyage du texte : "4 470,66 €" -> "4470,66"
+                    text = price_cell.get_text(strip=True).replace("\xa0", "").replace(" ", "").replace("€", "")
+                    
+                    if match := re.search(r"(\d+(?:[.,]\d+)?)", text):
+                        price = float(match.group(1).replace(",", "."))
+                        logger.success(f"💰 Cours de l'or actuel : {price}€")
+                        
+                        # Vérification du seuil à 4600€
+                        if price > 4600.0:
+                            send_alert(f"🚀 Alerte Or : Le cours de l'once a dépassé 4600€ ! (Actuel : {price}€)")
+                        return price
+            logger.warning("⚠️ Impossible de trouver l'élément 'Once d'or' ou 'cotation_amount' dans la page.")
+        else:
+            logger.error(f"❌ Erreur {response.status_code}: Impossible de récupérer la page du cours de l'or")
+    except Exception as e:
+        logger.error(f"❌ Erreur lors de la requête du cours de l'or : {e}")
+        
+    return None
+
+
 def main_function(url):
     logger.info("▶️ Début de l'exécution de main_function")
     products = get_products(url)
@@ -91,16 +133,20 @@ def main_function(url):
         logger.success(f"Produit analysé - Prix : {product.price}€ | LSP : {product.lsp}")
         
         # Le seuil est maintenant comparé au prix (ex: 95.0 pour valider ton test à 92.0)
-        if product.price is not None and product.lsp is True and product.price <= 90.0:
+        if product.price is not None and product.lsp is True and product.price <= 91.0:
             send_alert(f"⚠️ Alerte : prix avantageux {product.price}€ sur produit LSP !")
             
     logger.info("✅ Fin de l'exécution de main_function")
 
 
 url_target = "https://www.aucoffre.com/recherche/metal-3/marketing_list-4/stype-171/produit?page="
-
+url_gold_course = "https://www.aucoffre.com/cours-or"
 
 if __name__ == "__main__":
+    # 1. Vérification du cours de l'or avec la bonne URL
+    check_gold_price(url_gold_course)
+    
+    # 2. Vérification des produits (inchangé)
     for page in range(1, 5):
         logger.info(f"🔍 Traitement de la page {page}")
         main_function(f"{url_target}{page}")
