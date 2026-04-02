@@ -3,10 +3,10 @@ import pytest
 from unittest.mock import patch, MagicMock
 from bs4 import BeautifulSoup
 
-# Assure-toi que ton script principal s'appelle bien "main.py"
-from main import Product, get_products, main_function, send_alert
+# Assurez-vous que votre script principal s'appelle bien "main.py"
+from main import Product, get_products, main_function, send_alert, check_gold_price
 
-# --- FAUSSES DONNÉES HTML POUR LES TESTS ---
+# --- FAUSSES DONNÉES HTML POUR LES TESTS DES PRODUITS ---
 
 HTML_LSP_CHEAP = """
 <article class="product-card">
@@ -27,7 +27,37 @@ HTML_INVALID_PRICE = """
 </article>
 """
 
-# --- TESTS UNITAIRES (SANS RÉSEAU) ---
+# --- FAUSSES DONNÉES HTML POUR LES TESTS DU COURS DE L'OR ---
+
+HTML_GOLD_CHEAP = """
+<table>
+    <tr>
+        <td class="cotation_name">Once d'or</td>
+        <td class="cotation_amount">4 470,66 €</td>
+    </tr>
+</table>
+"""
+
+HTML_GOLD_EXPENSIVE = """
+<table>
+    <tr>
+        <td class="cotation_name">Once d'or</td>
+        <td class="cotation_amount">4 650,50 &nbsp;€</td>
+    </tr>
+</table>
+"""
+
+HTML_GOLD_NOT_FOUND = """
+<table>
+    <tr>
+        <td class="cotation_name">Argent</td>
+        <td class="cotation_amount">30,00 €</td>
+    </tr>
+</table>
+"""
+
+
+# --- TESTS UNITAIRES (PRODUITS) ---
 
 def test_product_extraction_lsp_cheap():
     """Teste l'extraction d'un produit qui a le badge LSP et un prix valide."""
@@ -53,11 +83,10 @@ def test_product_extraction_invalid_price():
     assert product.price is None
     assert product.lsp is False
 
-@patch("main.save_html_files")  # On empêche l'écriture de fichiers pendant les tests
-@patch("main.requests.get")     # On simule la requête HTTP
+@patch("main.save_html_files")
+@patch("main.requests.get")
 def test_get_products(mock_get, mock_save):
     """Teste la fonction de récupération des produits en simulant le site web."""
-    # Configuration de la fausse réponse
     mock_response = MagicMock()
     mock_response.status_code = 200
     mock_response.text = HTML_LSP_CHEAP + HTML_NO_LSP_EXPENSIVE
@@ -68,13 +97,12 @@ def test_get_products(mock_get, mock_save):
     assert len(products) == 2
     assert products[0].price == 85.5
     assert products[1].price == 105.0
-    mock_save.assert_called_once() # Vérifie qu'on a bien tenté de sauvegarder les fichiers HTML
+    mock_save.assert_called_once()
 
 @patch("main.get_products")
 @patch("main.send_alert")
 def test_main_function(mock_send_alert, mock_get_products):
-    """Teste la logique d'alerte : on ne doit alerter QUE si LSP=True ET Prix <= 90."""
-    # Création de faux produits
+    """Teste la logique d'alerte : on ne doit alerter QUE si LSP=True ET Prix <= 91."""
     p_trigger = MagicMock(price=85.0, lsp=True)     # Devrait déclencher
     p_expensive = MagicMock(price=95.0, lsp=True)   # Trop cher, ne doit pas déclencher
     p_no_lsp = MagicMock(price=80.0, lsp=False)     # Pas de LSP, ne doit pas déclencher
@@ -83,10 +111,55 @@ def test_main_function(mock_send_alert, mock_get_products):
     
     main_function("http://url-de-test.com")
     
-    # Vérification : send_alert ne doit avoir été appelée qu'une seule fois
     assert mock_send_alert.call_count == 1
-    # Vérifie que le message d'alerte contenait bien le prix de 85.0€
     assert "85.0" in mock_send_alert.call_args[0][0]
+
+
+# --- TESTS UNITAIRES (COURS DE L'OR) ---
+
+@patch("main.send_alert")
+@patch("main.requests.get")
+def test_check_gold_price_below_threshold(mock_get, mock_send_alert):
+    """Teste la récupération du prix de l'or quand il est en dessous de 4600€ (pas d'alerte)."""
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.text = HTML_GOLD_CHEAP
+    mock_get.return_value = mock_response
+
+    price = check_gold_price("http://url-de-test.com")
+    
+    assert price == 4470.66
+    mock_send_alert.assert_not_called()
+
+@patch("main.send_alert")
+@patch("main.requests.get")
+def test_check_gold_price_above_threshold(mock_get, mock_send_alert):
+    """Teste la récupération du prix de l'or quand il dépasse 4600€ (alerte attendue)."""
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.text = HTML_GOLD_EXPENSIVE
+    mock_get.return_value = mock_response
+
+    price = check_gold_price("http://url-de-test.com")
+    
+    assert price == 4650.50
+    mock_send_alert.assert_called_once()
+    assert "4650.5" in mock_send_alert.call_args[0][0]
+
+@patch("main.send_alert")
+@patch("main.requests.get")
+def test_check_gold_price_not_found(mock_get, mock_send_alert):
+    """Teste la robustesse de la fonction si la structure de la page a changé."""
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.text = HTML_GOLD_NOT_FOUND
+    mock_get.return_value = mock_response
+
+    price = check_gold_price("http://url-de-test.com")
+    
+    assert price is None
+    mock_send_alert.assert_not_called()
+
 
 # --- TEST D'INTÉGRATION RÉEL (RÉSEAU + API PUSHOVER) ---
 
@@ -100,16 +173,12 @@ def test_real_pushover_notification(mock_logger_success, mock_logger_error):
     token = os.environ.get("PUSHOVER_TOKEN")
     user = os.environ.get("PUSHOVER_USER")
     
-    # Si les variables ne sont pas là, on ignore le test plutôt que de le faire planter
     if not token or not user:
         pytest.skip("⚠️ Les variables PUSHOVER_TOKEN et PUSHOVER_USER ne sont pas définies.")
         
     message = "🧪 Ceci est un test automatisé depuis pytest pour vérifier la configuration de l'API."
     
-    # On exécute la vraie fonction
     send_alert(message)
     
-    # Comme ta fonction `send_alert` attrape les exceptions avec un try/except et fait un logger.error,
-    # on vérifie qu'aucun logger.error n'a été appelé et que logger.success l'a été.
     assert not mock_logger_error.called, "❌ Erreur détectée dans les logs : la configuration de l'API Pushover semble invalide."
     assert mock_logger_success.called, "✅ Le message n'a pas pu être envoyé à Pushover."
