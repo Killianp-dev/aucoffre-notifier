@@ -1,6 +1,8 @@
 import os
+import random
 import re
 from pathlib import Path
+import time
 import requests
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
@@ -129,18 +131,33 @@ def main_function(url, n):
     for product in products:
         logger.success(f"Produit analysé - Prix : {product.price}€ | LSP : {product.lsp}")
         
-        if product.price is not None and product.lsp is True and product.price <= n:
+        if product.price is not None and product.lsp is True and product.price >= n:
             send_alert(f"⚠️ Alerte : prix avantageux {product.price}€ sur produit LSP !")
             
     logger.info("✅ Fin de l'exécution de main_function")
 
 
-url_target = "https://www.aucoffre.com/recherche/metal-3/marketing_list-4/stype-171/produit?page="
+url_target_1 = "https://www.aucoffre.com/recherche/metal-3/marketing_list-4/stype-171/produit?page="
+url_target_2 = "https://www.aucoffre.com/recherche/metal-1/marketing_list-5/stype-1/produit"
 url_gold_course = "https://www.aucoffre.com/cours-or"
 
 if __name__ == "__main__":
     check_gold_price(url_gold_course, 4400.0)
     
-    for page in range(1, 5):
-        logger.info(f"🔍 Traitement de la page {page}")
-        main_function(f"{url_target}{page}", 91.0)
+    time.sleep(random.uniform(1.5, 3.0))
+    
+    for page in range(1, 2):
+        logger.info(f"🔍 Traitement de la page {page} (Cible 1)")
+        main_function(f"{url_target_1}{page}", 90.0)        
+        
+        delai = random.uniform(3.0, 6.0)
+        logger.info(f"⏳ Temporisation de {delai:.2f} secondes...")
+        time.sleep(delai)
+        
+        logger.info(f"🔍 Traitement de la page {page} (Cible 2)")
+        main_function(f"{url_target_2}", 900.0)
+        
+        delai_fin_boucle = random.uniform(4.0, 7.0)
+        logger.info(f"⏳ Fin de cycle, temporisation de {delai_fin_boucle:.2f} secondes...")
+        time.sleep(delai_fin_boucle)
+        
