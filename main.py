@@ -146,7 +146,7 @@ if __name__ == "__main__":
     
     time.sleep(random.uniform(1.5, 3.0))
     
-    for page in range(1, 2):
+    for page in range(1, 3):
         logger.info(f"🔍 Traitement de la page {page} (Cible 1)")
         main_function(f"{url_target_1}{page}", 90.0)        
         
