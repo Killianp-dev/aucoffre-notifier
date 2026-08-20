@@ -11,11 +11,12 @@ from loguru import logger
 load_dotenv()
 
 CURRENT_DIR = Path(__file__).resolve().parent
+LOG_DIR = CURRENT_DIR / "log" / "aucoffre.log"
 FILE_RAW = CURRENT_DIR / "page_content_raw.html"
 FILE_FORMATE = CURRENT_DIR / "page_content_formate.html"
 
 logger.add(
-    CURRENT_DIR / "aucoffre.log",
+    LOG_DIR,
     format="{time:YYYY-MM-DD HH:mm:ss.SSS} {level} {message}",
     level="INFO", 
     rotation="10 KB",
@@ -125,7 +126,7 @@ def check_gold_price(url, n):
 
 
 def main_function(url, n):
-    """Analyse les produits d'une page donnée et déclenche des alertes si le prix avantageux est inférieur ou égal au seuil n."""
+    """Analyse les produits d'une page donnée et déclenche des alertes si le prix avantageux est inférieur/supérieur ou égal au seuil n."""
     logger.info("▶️ Début de l'exécution de main_function")
     products = get_products(url)
     for product in products:
@@ -142,22 +143,22 @@ url_target_2 = "https://www.aucoffre.com/recherche/metal-1/marketing_list-5/styp
 url_gold_course = "https://www.aucoffre.com/cours-or"
 
 if __name__ == "__main__":
-    check_gold_price(url_gold_course, 4400.0)
+    # check_gold_price(url_gold_course, 4400.0)
     
     time.sleep(random.uniform(1.5, 3.0))
     
     for page in range(1, 3):
         logger.info(f"🔍 Traitement de la page {page} (Cible 1)")
-        main_function(f"{url_target_1}{page}", 90.0)        
+        main_function(f"{url_target_1}{page}", 79.0)        
         
-        delai = random.uniform(3.0, 6.0)
-        logger.info(f"⏳ Temporisation de {delai:.2f} secondes...")
-        time.sleep(delai)
+        # delai = random.uniform(3.0, 6.0)
+        # logger.info(f"⏳ Temporisation de {delai:.2f} secondes...")
+        # time.sleep(delai)
         
-        logger.info(f"🔍 Traitement de la page {page} (Cible 2)")
-        main_function(f"{url_target_2}", 900.0)
+        # logger.info(f"🔍 Traitement de la page {page} (Cible 2)")
+        # main_function(f"{url_target_2}", 900.0)
         
-        delai_fin_boucle = random.uniform(4.0, 7.0)
-        logger.info(f"⏳ Fin de cycle, temporisation de {delai_fin_boucle:.2f} secondes...")
-        time.sleep(delai_fin_boucle)
+        # delai_fin_boucle = random.uniform(4.0, 7.0)
+        # logger.info(f"⏳ Fin de cycle, temporisation de {delai_fin_boucle:.2f} secondes...")
+        # time.sleep(delai_fin_boucle)
         
