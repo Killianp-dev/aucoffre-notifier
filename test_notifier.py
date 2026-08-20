@@ -147,6 +147,7 @@ def test_check_gold_price_above_threshold(mock_get, mock_send_alert):
     assert price == 4650.50
     mock_send_alert.assert_called_once()
     assert "4650.5" in mock_send_alert.call_args[0][0]
+    assert "4600" in mock_send_alert.call_args[0][0]
 
 @patch("main.send_alert")
 @patch("main.requests.get")

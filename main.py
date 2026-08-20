@@ -114,7 +114,9 @@ def check_gold_price(url, n):
                         logger.success(f"💰 Cours de l'or actuel : {price}€")
                         
                         if price > n:
-                            send_alert(f"🚀 Alerte Or : Le cours de l'once a dépassé 4400€ ! (Actuel : {price}€)")
+                            send_alert(
+                                f"🚀 Alerte Or : Le cours de l'once a dépassé {n}€ ! (Actuel : {price}€)"
+                            )
                         return price
             logger.warning("⚠️ Impossible de trouver l'élément 'Once d'or' ou 'cotation_amount' dans la page.")
         else:
