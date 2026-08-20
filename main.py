@@ -149,16 +149,15 @@ if __name__ == "__main__":
     
     for page in range(1, 3):
         logger.info(f"🔍 Traitement de la page {page} (Cible 1)")
-        main_function(f"{url_target_1}{page}", 79.0)        
-        
-        # delai = random.uniform(3.0, 6.0)
-        # logger.info(f"⏳ Temporisation de {delai:.2f} secondes...")
-        # time.sleep(delai)
-        
+        main_function(f"{url_target_1}{page}", 79.0)
+
+        delai = random.uniform(3.0, 6.0)
+        logger.info(f"⏳ Temporisation de {delai:.2f} secondes...")
+        time.sleep(delai)
+
         # logger.info(f"🔍 Traitement de la page {page} (Cible 2)")
         # main_function(f"{url_target_2}", 900.0)
-        
-        # delai_fin_boucle = random.uniform(4.0, 7.0)
-        # logger.info(f"⏳ Fin de cycle, temporisation de {delai_fin_boucle:.2f} secondes...")
-        # time.sleep(delai_fin_boucle)
-        
+
+        delai_fin_boucle = random.uniform(4.0, 7.0)
+        logger.info(f"⏳ Fin de cycle, temporisation de {delai_fin_boucle:.2f} secondes...")
+        time.sleep(delai_fin_boucle)
